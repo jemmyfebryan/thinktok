@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-WikiTok is a TikTok-style interface for consuming Wikipedia content. Users scroll through vertically-snapped cards featuring random Wikipedia articles with images, summaries, and related topics. The app supports liking, commenting, and user profiles.
+ThinkTok is a TikTok-style interface for consuming Wikipedia content. Users scroll through vertically-snapped cards featuring random Wikipedia articles with images, summaries, and related topics. The app supports liking, commenting, and user profiles.
 
 ## Tech Stack
 
 - **Backend**: FastAPI with SQLAlchemy ORM
 - **Frontend**: HTMX + Tailwind CSS (via CDN) + Jinja2 templates
-- **Database**: SQLite (`wikitok.db`)
+- **Database**: SQLite (`thinktok.db`)
 - **Content**: Wikipedia API (using `wikipedia-api` and `wikipedia` packages)
 
 ## Development Commands
@@ -101,4 +101,4 @@ templates/
 
 ## Database Location
 
-SQLite database is at `./wikitok.db` in the project root. Use `sqlite3 wikitok.db` for direct inspection.
+SQLite database is at `./thinktok.db` in the project root. Use `sqlite3 thinktok.db` for direct inspection.

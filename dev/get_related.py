@@ -2,7 +2,7 @@ import wikipediaapi
 
 # Initialize Wikipedia with a clear User-Agent (Required by Wiki rules)
 wiki = wikipediaapi.Wikipedia(
-    user_agent="WikiTokPoC/1.0 (contact@example.com)",
+    user_agent="ThinkTokPoC/1.0 (contact@example.com)",
     language='en',
     extract_format=wikipediaapi.ExtractFormat.WIKI
 )

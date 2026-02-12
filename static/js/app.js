@@ -1,6 +1,6 @@
-// WikiTok SPA Application
+// ThinkTok SPA Application
 
-class WikiTok {
+class ThinkTok {
     constructor() {
         this.currentUser = null;
         this.feedItems = [];
@@ -14,7 +14,7 @@ class WikiTok {
     // LocalStorage
     getViewedHistory() {
         try {
-            const history = localStorage.getItem('wikitok_viewed_history');
+            const history = localStorage.getItem('thinktok_viewed_history');
             return history ? JSON.parse(history) : [];
         } catch {
             return [];
@@ -25,7 +25,7 @@ class WikiTok {
         const history = this.getViewedHistory();
         const filtered = history.filter(id => id !== contentId);
         const updated = [contentId, ...filtered].slice(0, 10);
-        localStorage.setItem('wikitok_viewed_history', JSON.stringify(updated));
+        localStorage.setItem('thinktok_viewed_history', JSON.stringify(updated));
         this.viewedHistory = updated;
     }
 
@@ -387,12 +387,12 @@ class WikiTok {
 
             if (navigator.share) {
                 await navigator.share({
-                    title: 'WikiTok',
+                    title: 'ThinkTok',
                     text: `Check out this Wikipedia article: ${pageTitle}`,
                     url: window.location.href
                 });
             } else {
-                await navigator.clipboard.writeText(`${pageTitle} - WikiTok`);
+                await navigator.clipboard.writeText(`${pageTitle} - ThinkTok`);
                 alert('Link copied to clipboard!');
             }
         } catch (error) {
@@ -648,7 +648,7 @@ class WikiTok {
             <div class="min-h-screen flex items-center justify-center bg-black p-4">
                 <div class="w-full bg-gray-900 rounded-2xl p-8 border border-gray-800">
                     <h1 class="text-4xl font-bold text-center mb-2 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                        WikiTok
+                        ThinkTok
                     </h1>
                     <p class="text-gray-400 text-center mb-8">Discover Wikipedia, one scroll at a time</p>
 
@@ -657,7 +657,7 @@ class WikiTok {
                             class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <button type="submit"
                             class="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg font-bold text-white hover:opacity-90 transition-opacity">
-                            Enter WikiTok
+                            Enter ThinkTok
                         </button>
                     </form>
                 </div>
@@ -848,7 +848,7 @@ class WikiTok {
 }
 
 // Initialize app
-const app = new WikiTok();
+const app = new ThinkTok();
 
 // Start app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {

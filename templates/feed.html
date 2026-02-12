@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WikiTok</title>
+    <title>ThinkTok</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -128,7 +128,7 @@
 
     <script>
         // LocalStorage keys
-        const VIEWED_HISTORY_KEY = 'wikitok_viewed_history';
+        const VIEWED_HISTORY_KEY = 'thinktok_viewed_history';
         const MAX_HISTORY = 10;
 
         // Get viewed history from localStorage
@@ -254,12 +254,12 @@
                 // Try native share, fallback to clipboard
                 if (navigator.share) {
                     await navigator.share({
-                        title: 'WikiTok',
+                        title: 'ThinkTok',
                         text: `Check out this Wikipedia article: ${pageTitle}`,
                         url: window.location.href
                     });
                 } else {
-                    await navigator.clipboard.writeText(`${pageTitle} - WikiTok`);
+                    await navigator.clipboard.writeText(`${pageTitle} - ThinkTok`);
                     alert('Link copied to clipboard!');
                 }
             } catch (e) {
