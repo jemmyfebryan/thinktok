@@ -32,7 +32,8 @@ async def get_or_create_wiki_content(db: AsyncSession, title: str = None) -> Opt
         return {
             "content_id": cached.content_id,
             "title": cached.title,
-            "summary": cached.summary,
+            "summary": cached.summary[:200] + "..." if len(cached.summary) > 200 else cached.summary[:200],
+            "whole_summary": cached.summary,
             "image": cached.image_url,
             "related": json.loads(cached.related_links) if cached.related_links else [],
             "categories": json.loads(cached.categories) if cached.categories else []
@@ -42,10 +43,11 @@ async def get_or_create_wiki_content(db: AsyncSession, title: str = None) -> Opt
     try:
         page = wikipedia.page(title, auto_suggest=False)
 
+        full_summary = page.summary
         new_content = WikiContent(
             content_id=content_id,
             title=page.title,
-            summary=page.summary[:500] + "...",
+            summary=full_summary,
             image_url=page.images[0] if page.images else None,
             related_links=json.dumps(page.links[:10]),
             categories=json.dumps(page.categories[:10] if hasattr(page, 'categories') else [])
@@ -56,7 +58,8 @@ async def get_or_create_wiki_content(db: AsyncSession, title: str = None) -> Opt
         return {
             "content_id": new_content.content_id,
             "title": new_content.title,
-            "summary": new_content.summary,
+            "summary": full_summary[:200] + "..." if len(full_summary) > 200 else full_summary[:200],
+            "whole_summary": full_summary,
             "image": new_content.image_url,
             "related": json.loads(new_content.related_links),
             "categories": json.loads(new_content.categories)

@@ -163,6 +163,14 @@ class WikiTok {
         const heartBg = item.is_liked ? 'bg-red-600' : 'bg-gray-800/60 hover:bg-gray-700';
         const likeText = item.is_liked ? 'Liked' : 'Like';
         const escapedTitle = this.escapeHtml(item.title);
+        const shortSummary = this.escapeHtml(item.summary);
+        const wholeSummary = this.escapeHtml(item.whole_summary || item.summary);
+        // Only show button if summary is different from whole_summary
+        const isLongText = item.whole_summary && item.summary !== item.whole_summary;
+
+        // Use Base64 to safely store text in data attributes
+        const shortBase64 = btoa(encodeURIComponent(item.summary));
+        const wholeBase64 = btoa(encodeURIComponent(item.whole_summary || item.summary));
 
         return `
             <div class="snap-center relative w-full h-full flex flex-col justify-end pb-20 border-b border-gray-900"
@@ -176,7 +184,14 @@ class WikiTok {
                 <div class="relative z-10 px-4 max-w-[85%] pointer-events-none">
                     <div class="mb-4 pointer-events-auto">
                         <h2 class="text-2xl font-bold mb-2 drop-shadow-lg text-white">${escapedTitle}</h2>
-                        <p class="text-sm text-gray-200 line-clamp-3 leading-relaxed drop-shadow-md">${this.escapeHtml(item.summary)}</p>
+                        <div class="summary-container">
+                            <p class="text-sm text-gray-200 leading-relaxed drop-shadow-md cursor-pointer summary-text transition-all duration-300" data-short-b64="${shortBase64}" data-whole-b64="${wholeBase64}" data-expanded="false">${shortSummary}</p>
+                            ${isLongText ? `
+                            <button class="text-xs text-blue-400 mt-1 font-semibold hover:text-blue-300 transition-colors summary-toggle">
+                                more
+                            </button>
+                            ` : ''}
+                        </div>
                     </div>
                     <div class="flex flex-wrap gap-2 pointer-events-auto">
                         ${item.related.slice(0, 5).map(tag => `
@@ -203,7 +218,7 @@ class WikiTok {
                         <span class="text-xs font-bold drop-shadow-md">${item.comment_count || 0}</span>
                     </button>
 
-                    <button class="share-button flex flex-col items-center group active:scale-90 transition-transform cursor-pointer"
+                    <button class="share-button flex-col items-center group active:scale-90 transition-transform cursor-pointer"
                             data-content-id="${item.content_id}"
                             data-page-title="${escapedTitle}">
                         <div class="w-12 h-12 bg-gray-800/60 backdrop-blur-sm rounded-full flex items-center justify-center mb-1">
@@ -570,6 +585,27 @@ class WikiTok {
             }
         });
 
+        // Event delegation for summary toggle
+        document.addEventListener('click', (e) => {
+            const summaryToggle = e.target.closest('.summary-toggle');
+            const summaryText = e.target.closest('.summary-text');
+
+            // Handle "more"/"less" button click
+            if (summaryToggle) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleSummary(summaryToggle);
+            }
+            // Handle clicking directly on the summary text
+            else if (summaryText) {
+                const container = summaryText.closest('.summary-container');
+                const toggleBtn = container?.querySelector('.summary-toggle');
+                if (toggleBtn) {
+                    this.toggleSummary(toggleBtn);
+                }
+            }
+        });
+
         // Event delegation for comments buttons
         document.addEventListener('click', (e) => {
             const commentsButton = e.target.closest('.comments-button');
@@ -598,6 +634,35 @@ class WikiTok {
                 this.navigate(link.dataset.route);
             });
         });
+    }
+
+    toggleSummary(toggleBtn) {
+        const container = toggleBtn.closest('.summary-container');
+        const summaryText = container.querySelector('.summary-text');
+        const shortText = this.decodeBase64(summaryText.dataset.shortB64);
+        const wholeText = this.decodeBase64(summaryText.dataset.wholeB64);
+        const isExpanded = summaryText.dataset.expanded === 'true';
+
+        if (isExpanded) {
+            // Collapse
+            summaryText.textContent = this.escapeHtml(shortText);
+            summaryText.dataset.expanded = 'false';
+            toggleBtn.textContent = 'more';
+        } else {
+            // Expand
+            summaryText.textContent = this.escapeHtml(wholeText);
+            summaryText.dataset.expanded = 'true';
+            toggleBtn.textContent = 'less';
+        }
+    }
+
+    decodeBase64(base64) {
+        try {
+            return decodeURIComponent(atob(base64));
+        } catch (e) {
+            console.error('Error decoding Base64:', e);
+            return '';
+        }
     }
 
     async navigate(route) {

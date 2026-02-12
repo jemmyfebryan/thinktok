@@ -66,3 +66,28 @@ body {
 .opacity-100 {
     opacity: 1;
 }
+
+/* Summary Toggle */
+.summary-text {
+    line-clamp: 3;
+    -webkit-line-clamp: 3;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.summary-text[data-expanded="true"] {
+    line-clamp: unset;
+    -webkit-line-clamp: unset;
+    display: block;
+    overflow: visible;
+}
+
+.summary-container {
+    position: relative;
+}
+
+.summary-toggle {
+    cursor: pointer;
+    user-select: none;
+}
