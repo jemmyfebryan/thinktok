@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        #feed-container {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+        }
+        .card {
+            height: 100vh;
+            scroll-snap-align: start;
+            border: 2px solid red;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+        }
+        #load-more-sentinel {
+            height: 1px;
+            background-color: blue;
+        }
+        #loading-indicator {
+            height: 100px;
+            background-color: yellow;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="feed-container">
+        <div class="card" data-content-id="1">1</div>
+        <div class="card" data-content-id="2">2</div>
+        <div class="card" data-content-id="3">3</div>
+        <div class="card" data-content-id="4">4</div>
+        <div class="card" data-content-id="5">5</div>
+        <div class="card" data-content-id="6">6</div>
+        <div class="card" data-content-id="7">7</div>
+        <div class="card" data-content-id="8">8</div>
+        <div class="card" data-content-id="9">9</div>
+        <div class="card" data-content-id="10">10</div>
+        <div id="loading-indicator">Loading Indicator</div>
+    </div>
+
+    <script>
+        const LOAD_MORE_THRESHOLD = 5;
+        const feedContainer = document.getElementById('feed-container');
+        const loadingIndicator = document.getElementById('loading-indicator');
+
+        // Create sentinel
+        const sentinel = document.createElement('div');
+        sentinel.id = 'load-more-sentinel';
+
+        // Position sentinel
+        function positionSentinel() {
+            const allCards = feedContainer.querySelectorAll('[data-content-id]');
+            console.log(`\n=== Positioning sentinel ===`);
+            console.log(`Total cards: ${allCards.length}, threshold: ${LOAD_MORE_THRESHOLD}`);
+
+            if (allCards.length > LOAD_MORE_THRESHOLD) {
+                // We want to trigger when user is 5 cards away from the last
+                // Card 10 = last (0 away)
+                // Card 9 = 1 away
+                // Card 8 = 2 away
+                // Card 7 = 3 away
+                // Card 6 = 4 away
+                // Card 5 = 5 away ← INSERT SENTINEL HERE
+                // Card 5 is at index 4, which is: (length - 1) - threshold
+                const targetIndex = (allCards.length - 1) - LOAD_MORE_THRESHOLD;
+                const targetCard = allCards[targetIndex];
+                const cardsRemaining = allCards.length - targetIndex;
+                console.log(`Target index: ${targetIndex}, Card: ${targetIndex + 1}`);
+                console.log(`Cards AFTER sentinel (remaining to scroll): ${cardsRemaining}`);
+                console.log(`Expected: ${LOAD_MORE_THRESHOLD + 1} cards should remain`);
+                targetCard.insertAdjacentElement('beforebegin', sentinel);
+            } else {
+                // Position at middle when not enough cards
+                const middleIndex = Math.floor(allCards.length / 2);
+                const targetCard = allCards[middleIndex];
+                console.log(`Not enough cards, positioning at middle index: ${middleIndex}, card: ${middleIndex + 1}`);
+                targetCard.insertAdjacentElement('beforebegin', sentinel);
+            }
+        }
+
+        positionSentinel();
+
+        // Test intersection
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                console.log('🚨 SENTINEL VISIBLE - Would trigger loadMore() here!');
+                const visibleCard = Array.from(feedContainer.querySelectorAll('[data-content-id]'))
+                    .find(card => {
+                        const rect = card.getBoundingClientRect();
+                        return rect.top >= 0 && rect.top < window.innerHeight / 2;
+                    });
+                if (visibleCard) {
+                    console.log(`Currently viewing card: ${visibleCard.textContent}`);
+                    const allCards = feedContainer.querySelectorAll('[data-content-id]');
+                    const currentIndex = Array.from(allCards).indexOf(visibleCard);
+                    const remaining = allCards.length - currentIndex;
+                    console.log(`Cards remaining to scroll: ${remaining}`);
+                }
+            }
+        }, { threshold: 0.1 });
+
+        observer.observe(sentinel);
+    </script>
+</body>
+</html>

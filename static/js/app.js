@@ -91,6 +91,13 @@ class WikiTok {
         return data.items;
     }
 
+    async loadInitialAdditionalItems() {
+        // Load additional items after initial feed is displayed
+        const exclude = this.viewedHistory.join(',');
+        const data = await this.api(`/feed/more?exclude=${encodeURIComponent(exclude)}`);
+        return data.items;
+    }
+
     async loadMore() {
         if (this.isLoading) return [];
 
@@ -440,16 +447,20 @@ class WikiTok {
         newCards.forEach(card => observer.observe(card));
     }
 
-    // Infinite Scroll
+    // Infinite Scroll - triggers when 5 cards away from end
     setupInfiniteScroll() {
         const loadingIndicator = document.getElementById('loading-indicator');
+        this.LOAD_MORE_THRESHOLD = 5; // Trigger when 5 cards away from end
+
+        // Create or get sentinel element for detecting when to load more
+        const sentinelElement = this.getOrCreateLoadMoreSentinel();
 
         const loadMoreObserver = new IntersectionObserver(async (entries) => {
             if (entries[0].isIntersecting && !this.isLoading) {
+                console.log('🚨 Sentinel visible! Loading more content...');
                 const newItems = await this.loadMore();
 
                 if (newItems.length > 0) {
-                    const feedContainer = document.getElementById('feed-container');
                     const observer = this.viewObserver;
 
                     newItems.forEach(item => {
@@ -467,15 +478,71 @@ class WikiTok {
 
                         observer.observe(card);
                     });
+
+                    // Reposition sentinel after adding new cards
+                    this.repositionSentinel();
                 } else {
                     loadingIndicator.style.display = 'none';
+                    sentinelElement.remove();
                     loadMoreObserver.disconnect();
                 }
             }
-        }, { rootMargin: '400px' });
+        }, { threshold: 0.1 });
 
-        loadMoreObserver.observe(loadingIndicator);
+        // Observe the sentinel element
+        loadMoreObserver.observe(sentinelElement);
+
+        // Store observer reference for updates
+        this.loadMoreObserver = loadMoreObserver;
+        this.sentinelElement = sentinelElement;
     }
+
+    // Create sentinel element
+    getOrCreateLoadMoreSentinel() {
+        let sentinel = document.getElementById('load-more-sentinel');
+        if (!sentinel) {
+            sentinel = document.createElement('div');
+            sentinel.id = 'load-more-sentinel';
+            sentinel.style.height = '1px';
+            sentinel.style.pointerEvents = 'none';
+        }
+
+        // Position it initially
+        this.repositionSentinel();
+        return sentinel;
+    }
+
+    // Reposition sentinel based on current cards
+    repositionSentinel() {
+        const sentinel = this.sentinelElement || document.getElementById('load-more-sentinel');
+        if (!sentinel) return;
+
+        const feedContainer = document.getElementById('feed-container');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const allCards = feedContainer.querySelectorAll('[data-content-id]');
+        const totalCards = allCards.length;
+
+        console.log(`Repositioning sentinel: ${totalCards} cards total, threshold=${this.LOAD_MORE_THRESHOLD}`);
+
+        if (totalCards > this.LOAD_MORE_THRESHOLD) {
+            // Position BEFORE the card that is LOAD_MORE_THRESHOLD cards from end
+            // 10 cards, threshold 5: want 5th from end (cards 5,6,7,8,9,10 = 6 cards)
+            // So position before card 5, which is index 4: (10 - 1) - 5 = 4
+            const targetIndex = (totalCards - 1) - this.LOAD_MORE_THRESHOLD;
+            const targetCard = allCards[targetIndex];
+            const cardsRemaining = totalCards - targetIndex;
+
+            console.log(`✅ Positioning sentinel before card ${targetIndex + 1}, ${cardsRemaining} cards remaining (including current)`);
+
+            // Move sentinel to new position
+            targetCard.insertAdjacentElement('beforebegin', sentinel);
+        } else {
+            // Not enough cards yet - position after current cards
+            console.log(`⚠️ Only ${totalCards} cards, positioning sentinel at end`);
+            loadingIndicator.insertAdjacentElement('beforebegin', sentinel);
+        }
+    }
+
 
     // Initialize
     async init() {
@@ -489,11 +556,11 @@ class WikiTok {
 
         this.currentUser = user;
 
-        // Load feed
+        // Load initial feed (5 cached items - FAST)
         const items = await this.loadFeed();
         this.feedItems = items;
 
-        // Render
+        // Render initial items immediately
         this.renderFeed(items);
 
         // Setup tracking
@@ -504,6 +571,51 @@ class WikiTok {
 
         // Setup event listeners
         this.setupEventListeners();
+
+        // Load additional items in background (may call Wikipedia API - slower)
+        // This doesn't block the initial render
+        this.loadAdditionalItemsInBackground();
+    }
+
+    async loadAdditionalItemsInBackground() {
+        try {
+            console.log('Loading additional items in background...');
+            const additionalItems = await this.loadInitialAdditionalItems();
+
+            if (additionalItems.length > 0) {
+                console.log(`Loaded ${additionalItems.length} additional items`);
+                this.appendItemsToFeed(additionalItems);
+            }
+        } catch (error) {
+            console.error('Failed to load additional items:', error);
+        }
+    }
+
+    appendItemsToFeed(items) {
+        const loadingIndicator = document.getElementById('loading-indicator');
+
+        items.forEach(item => {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = this.renderFeedCard(item);
+            const card = tempDiv.firstElementChild;
+
+            loadingIndicator.insertAdjacentElement('beforebegin', card);
+
+            // Setup like button
+            const likeButton = card.querySelector('.like-button');
+            if (likeButton) {
+                likeButton.addEventListener('click', () => this.handleLike(likeButton));
+            }
+
+            // Observe for view tracking
+            if (this.viewObserver) {
+                this.viewObserver.observe(card);
+            }
+        });
+
+        // Reposition sentinel after adding new cards
+        console.log(`Background load complete: ${items.length} items added`);
+        this.repositionSentinel();
     }
 
     renderFeed(items) {

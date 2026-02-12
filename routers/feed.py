@@ -2,12 +2,43 @@ from fastapi import APIRouter, Cookie, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
-from models import User, Like, Comment
+from models import User, Like, Comment, WikiContent
 from database import get_db
 from services.recommendation_service import get_personalized_feed
 from services.wiki_service import get_or_create_wiki_content
+import json
+import random
 
 router = APIRouter()
+
+
+async def get_cached_feed_items(db: AsyncSession, count: int, exclude: set) -> list:
+    """Get random items from cache (DB), no Wikipedia API calls"""
+    # Get all cached content
+    result = await db.execute(select(WikiContent))
+    cached_items = result.scalars().all()
+
+    # Shuffle for randomness
+    random.shuffle(cached_items)
+
+    feed_items = []
+    for cached in cached_items:
+        if cached.content_id in exclude:
+            continue
+        if len(feed_items) >= count:
+            break
+
+        feed_items.append({
+            "content_id": cached.content_id,
+            "title": cached.title,
+            "summary": cached.summary[:200] + "..." if len(cached.summary) > 200 else cached.summary[:200],
+            "whole_summary": cached.summary,
+            "image": cached.image_url,
+            "related": json.loads(cached.related_links) if cached.related_links else [],
+            "categories": json.loads(cached.categories) if cached.categories else []
+        })
+
+    return feed_items
 
 
 @router.get("/api/feed")
@@ -25,7 +56,53 @@ async def get_feed(
         return JSONResponse({"error": "User not found"}, status_code=401)
 
     exclude_ids = set([t.strip() for t in exclude.split(',') if t.strip()]) if exclude else set()
+
+    # Only get 5 cached items - FAST response, no Wikipedia API calls
+    feed_items = await get_cached_feed_items(db, count=5, exclude=exclude_ids)
+
+    for item in feed_items:
+        result = await db.execute(
+            select(Like).filter(
+                and_(Like.user_id == user.id, Like.content_id == item['content_id'])
+            )
+        )
+        is_liked = result.scalars().first() is not None
+
+        result = await db.execute(
+            select(func.count(Comment.id)).filter(Comment.content_id == item['content_id'])
+        )
+        comment_count = result.scalar() or 0
+
+        item['is_liked'] = is_liked
+        item['comment_count'] = comment_count
+
+    return JSONResponse({
+        "items": feed_items
+    })
+
+
+@router.get("/api/feed/more")
+async def get_feed_more(
+    exclude: str = "",
+    username: str = Cookie(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get additional personalized items (may call Wikipedia API)"""
+    if not username:
+        return JSONResponse({"items": []})
+
+    result = await db.execute(select(User).filter(User.username == username))
+    user = result.scalars().first()
+    if not user:
+        return JSONResponse({"items": []})
+
+    exclude_ids = set([t.strip() for t in exclude.split(',') if t.strip()]) if exclude else set()
+
+    # Get 5 personalized items (may call Wikipedia API - slower)
     feed_items = await get_personalized_feed(db, user.id, count=5, exclude=exclude_ids)
+
+    if not feed_items:
+        return JSONResponse({"items": []})
 
     for item in feed_items:
         result = await db.execute(
@@ -63,7 +140,7 @@ async def load_more(
         return JSONResponse({"items": []})
 
     exclude_ids = set([t.strip() for t in exclude.split(',') if t.strip()]) if exclude else set()
-    feed_items = await get_personalized_feed(db, user.id, count=3, exclude=exclude_ids)
+    feed_items = await get_personalized_feed(db, user.id, count=5, exclude=exclude_ids)
 
     if not feed_items:
         for _ in range(10):
