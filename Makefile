@@ -1,7 +1,7 @@
 # Save this file as: ./Makefile
 
 # Name of the app as defined in ecosystem.json
-APP_NAME = "signal-backend"
+APP_NAME = "thinktok-backend"
 # Path to the ecosystem file
 ECO_FILE = "ecosystem.json"
 

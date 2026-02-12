@@ -1,0 +1,14 @@
+{
+  "apps": [
+    {
+      "name": "thinktok-backend",
+      "script": "uvicorn",
+      "args": "main:app --host 0.0.0.0 --port 5898",
+      "interpreter": "python",
+      "cwd": ".",
+      "env_production": {
+        "NODE_ENV": "production"
+      }
+    }
+  ]
+}
