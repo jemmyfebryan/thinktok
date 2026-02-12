@@ -1,0 +1,68 @@
+/* Base Reset */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    background-color: black;
+    display: flex;
+    justify-content: center;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background-color: black;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+}
+
+/* Feed Container */
+#feed-container {
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Hide Scrollbar */
+#feed-container::-webkit-scrollbar {
+    display: none;
+}
+#feed-container {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Snap Cards */
+.snap-center {
+    scroll-snap-align: start;
+    height: 100vh;
+    height: 100dvh;
+    width: 100%;
+    flex-shrink: 0;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.opacity-100 {
+    opacity: 1;
+}

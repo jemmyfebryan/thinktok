@@ -1,0 +1,16 @@
+<div id="comment-list-content" class="space-y-4 pb-20">
+    {% for comment in comments %}
+        {% include 'partials/single_comment.html' %}
+    {% else %}
+        <p class="text-center text-gray-400 py-10">No comments yet. Say something!</p>
+    {% endfor %}
+</div>
+
+<form hx-post="/post_comment" hx-target="#comment-list-content" hx-swap="beforeend"
+      hx-on::after-request="this.reset()"
+      class="absolute bottom-0 left-0 w-full p-4 bg-gray-900 border-t border-gray-700 flex gap-2">
+    <input type="hidden" name="content_id" value="{{ content_id }}">
+    <input type="text" name="text" placeholder="Add a comment..." required autocomplete="off"
+        class="flex-1 bg-gray-800 text-white rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <button type="submit" class="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center">➤</button>
+</form>

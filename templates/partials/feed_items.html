@@ -1,0 +1,41 @@
+{% for item in feed_items %}
+<div class="snap-center relative w-full h-full flex flex-col justify-end pb-20 border-b border-gray-800" data-content-id="{{ item.content_id }}" data-page-title="{{ item.title }}">
+
+    {% if item.image %}
+    <div class="absolute inset-0 bg-cover bg-center opacity-60" style="background-image: url('{{ item.image }}');"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/90"></div>
+    {% endif %}
+
+    <div class="absolute right-4 bottom-32 flex flex-col items-center gap-6 z-20 pointer-events-auto">
+
+        {% set content_id = item.content_id %}
+        {% include 'partials/like_button.html' %}
+
+        <button onclick="openComments('{{ item.content_id }}')"
+            class="flex flex-col items-center group active:scale-90 transition-transform">
+            <div class="w-12 h-12 bg-gray-800/60 rounded-full flex items-center justify-center mb-1">
+                <span class="text-2xl">💬</span>
+            </div>
+            <span class="text-xs font-bold drop-shadow-md">{{ item.comment_count }}</span>
+        </button>
+
+        <button onclick="shareContent('{{ item.content_id }}', '{{ item.title }}')" class="flex flex-col items-center group active:scale-90 transition-transform">
+            <div class="w-12 h-12 bg-gray-800/60 rounded-full flex items-center justify-center mb-1">
+                <span class="text-2xl">↪️</span>
+            </div>
+            <span class="text-xs font-bold drop-shadow-md">Share</span>
+        </button>
+    </div>
+
+    <div class="relative z-10 px-4 max-w-[85%]">
+        <h2 class="text-2xl font-bold mb-2 text-shadow">{{ item.title }}</h2>
+        <p class="text-sm line-clamp-3 text-gray-200 mb-4">{{ item.summary }}</p>
+        <div class="flex flex-wrap gap-2">
+            {% for tag in item.related[:5] %}
+            <span class="bg-white/20 backdrop-blur-sm px-2 py-1 rounded text-xs">#{{ tag[:10] }}</span>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endfor %}

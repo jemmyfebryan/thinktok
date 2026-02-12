@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WikiTok</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 1. SCROLL SNAP MAGIC */
+        .snap-y-mandatory {
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll;
+            height: 100vh;
+            scroll-behavior: smooth;
+        }
+        .snap-center {
+            scroll-snap-align: start;
+            height: 100vh;
+            width: 100%;
+        }
+        /* Hide scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Loading indicator */
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .opacity-100 {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-black text-white overflow-hidden">
+
+    <div id="feed-container" class="snap-y-mandatory no-scrollbar w-full max-w-md mx-auto relative bg-gray-900">
+
+        {% for item in feed_items %}
+        <div class="snap-center relative w-full h-full flex flex-col justify-end pb-20 border-b border-gray-800" data-content-id="{{ item.content_id }}" data-page-title="{{ item.title }}">
+
+            {% if item.image %}
+            <div class="absolute inset-0 bg-cover bg-center opacity-60" style="background-image: url('{{ item.image }}');"></div>
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/90"></div>
+            {% endif %}
+
+            <div class="absolute right-4 bottom-32 flex flex-col items-center gap-6 z-20 pointer-events-auto">
+
+                {% set content_id = item.content_id %}
+                {% include 'partials/like_button.html' %}
+
+                <button onclick="openComments('{{ item.content_id }}')"
+                    class="flex flex-col items-center group active:scale-90 transition-transform">
+                    <div class="w-12 h-12 bg-gray-800/60 rounded-full flex items-center justify-center mb-1">
+                        <span class="text-2xl">💬</span>
+                    </div>
+                    <span class="text-xs font-bold drop-shadow-md">{{ item.comment_count }}</span>
+                </button>
+
+                <button onclick="shareContent('{{ item.content_id }}', '{{ item.title }}')" class="flex flex-col items-center group active:scale-90 transition-transform">
+                    <div class="w-12 h-12 bg-gray-800/60 rounded-full flex items-center justify-center mb-1">
+                        <span class="text-2xl">↪️</span>
+                    </div>
+                    <span class="text-xs font-bold drop-shadow-md">Share</span>
+                </button>
+            </div>
+
+            <div class="relative z-10 px-4 max-w-[85%]">
+                <h2 class="text-2xl font-bold mb-2 text-shadow">{{ item.title }}</h2>
+                <p class="text-sm line-clamp-3 text-gray-200 mb-4">{{ item.summary }}</p>
+                <div class="flex flex-wrap gap-2">
+                    {% for tag in item.related[:5] %}
+                    <span class="bg-white/20 backdrop-blur-sm px-2 py-1 rounded text-xs">#{{ tag[:10] }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+        {% endfor %}
+
+        <!-- Loading indicator for infinite scroll -->
+        <div id="loading-indicator" class="h-32 flex items-center justify-center opacity-0">
+            <div class="text-center">
+                <div class="loading-spinner text-4xl mb-2">🌀</div>
+                <p class="text-gray-400">Loading more content...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 h-16 bg-black border-t border-gray-800 flex justify-around items-center z-30" style="max-width: 480px; margin: 0 auto;">
+        <a href="/" class="flex flex-col items-center text-white no-underline">
+            <span class="text-2xl">🏠</span>
+            <span class="text-[10px] font-bold mt-1">Home</span>
+        </a>
+        <div class="w-10 h-10 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-full flex items-center justify-center -mt-6 border-4 border-black shadow-lg">
+            <span class="text-xl">➕</span>
+        </div>
+        <a href="/profile" class="flex flex-col items-center text-gray-500 hover:text-white transition-colors no-underline">
+            <span class="text-2xl">👤</span>
+            <span class="text-[10px] font-bold mt-1">Profile</span>
+        </a>
+    </nav>
+
+    <div id="comment-sheet" class="fixed inset-0 z-50 pointer-events-none transition-opacity duration-300 opacity-0">
+        <div onclick="closeComments()" class="absolute inset-0 bg-black/60 overlay-backdrop"></div>
+
+        <div id="sheet-content" class="absolute bottom-0 w-full h-[60vh] bg-gray-900 rounded-t-2xl transform translate-y-full transition-transform duration-300 ease-out pointer-events-auto flex flex-col">
+
+            <div class="w-full flex justify-center py-3" onclick="closeComments()">
+                <div class="w-12 h-1.5 bg-gray-600 rounded-full"></div>
+            </div>
+
+            <div class="px-4 border-b border-gray-800 pb-2 flex justify-between items-center">
+                <h3 class="font-bold">Comments</h3>
+                <button onclick="closeComments()" class="text-gray-400">✕</button>
+            </div>
+
+            <div id="comments-container" class="flex-1 overflow-y-auto p-4">
+                <div class="flex justify-center mt-10"><span class="animate-spin text-2xl">🌀</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // LocalStorage keys
+        const VIEWED_HISTORY_KEY = 'wikitok_viewed_history';
+        const MAX_HISTORY = 10;
+
+        // Get viewed history from localStorage
+        function getViewedHistory() {
+            try {
+                const history = localStorage.getItem(VIEWED_HISTORY_KEY);
+                return history ? JSON.parse(history) : [];
+            } catch {
+                return [];
+            }
+        }
+
+        // Add to viewed history
+        function addToViewedHistory(pageTitle) {
+            const history = getViewedHistory();
+            // Remove if already exists (to move to end)
+            const filtered = history.filter(t => t !== pageTitle);
+            // Add to front, keep only MAX_HISTORY
+            const updated = [pageTitle, ...filtered].slice(0, MAX_HISTORY);
+            localStorage.setItem(VIEWED_HISTORY_KEY, JSON.stringify(updated));
+        }
+
+        // Check if page was recently viewed
+        function wasRecentlyViewed(pageTitle) {
+            const history = getViewedHistory();
+            return history.includes(pageTitle);
+        }
+
+        // Track view times for each card - use Map to track multiple cards
+        const cardViewStartTimes = new Map(); // content_id -> startTime
+        const trackedCards = new Set(); // Cards we've already tracked this session
+
+        // Setup Intersection Observer for view tracking
+        const viewObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const card = entry.target;
+                const contentId = card.dataset.contentId;
+                const pageTitle = card.dataset.pageTitle;
+
+                if (!contentId || !pageTitle) return;
+
+                if (entry.isIntersecting) {
+                    // Card came into view - start tracking
+                    if (!cardViewStartTimes.has(contentId)) {
+                        cardViewStartTimes.set(contentId, Date.now());
+                    }
+                } else {
+                    // Card went out of view - send tracking data
+                    const startTime = cardViewStartTimes.get(contentId);
+                    if (startTime) {
+                        const viewDuration = (Date.now() - startTime) / 1000; // Convert to seconds
+                        trackView(contentId, pageTitle, viewDuration);
+                        cardViewStartTimes.delete(contentId);
+                    }
+                }
+            });
+        }, { threshold: 0.5 });
+
+        // Observe all existing feed cards
+        document.querySelectorAll('[data-content-id]').forEach(card => {
+            viewObserver.observe(card);
+        });
+
+        // Track view API call
+        async function trackView(contentId, pageTitle, duration) {
+            // Only track views > 0.5 seconds
+            if (duration < 0.5) return;
+
+            // Don't track if we already tracked this card in this session
+            if (trackedCards.has(contentId)) return;
+
+            // Don't track if recently viewed (from localStorage)
+            if (wasRecentlyViewed(contentId)) return;
+
+            // Mark as tracked and add to history
+            trackedCards.add(contentId);
+            addToViewedHistory(contentId);
+
+            const formData = new FormData();
+            formData.append('content_id', contentId);
+            formData.append('view_duration', duration.toString());
+
+            try {
+                await fetch('/track_view', {
+                    method: 'POST',
+                    body: formData
+                });
+            } catch (e) {
+                console.error('Failed to track view:', e);
+            }
+        }
+
+        // Send pending view times when user leaves page
+        window.addEventListener('beforeunload', () => {
+            cardViewStartTimes.forEach((startTime, contentId) => {
+                const card = document.querySelector(`[data-content-id="${contentId}"]`);
+                const pageTitle = card?.dataset.pageTitle || 'Unknown';
+
+                const duration = (Date.now() - startTime) / 1000;
+                if (duration >= 0.5 && !trackedCards.has(contentId) && !wasRecentlyViewed(contentId)) {
+                    // Use sendBeacon for reliable delivery on page unload
+                    const formData = new FormData();
+                    formData.append('content_id', contentId);
+                    formData.append('view_duration', duration.toString());
+                    navigator.sendBeacon('/track_view', formData);
+                }
+            });
+        });
+
+        // Get viewed history to send to backend (for filtering duplicates)
+        function getHistoryForBackend() {
+            return getViewedHistory().join(',');
+        }
+
+        // Share content
+        async function shareContent(contentId, pageTitle) {
+            const formData = new FormData();
+            formData.append('content_id', contentId);
+
+            try {
+                await fetch('/track_share', { method: 'POST', body: formData });
+
+                // Try native share, fallback to clipboard
+                if (navigator.share) {
+                    await navigator.share({
+                        title: 'WikiTok',
+                        text: `Check out this Wikipedia article: ${pageTitle}`,
+                        url: window.location.href
+                    });
+                } else {
+                    await navigator.clipboard.writeText(`${pageTitle} - WikiTok`);
+                    alert('Link copied to clipboard!');
+                }
+            } catch (e) {
+                console.error('Share failed:', e);
+            }
+        }
+
+        // Infinite scroll setup
+        const feedContainer = document.getElementById('feed-container');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        let isLoading = false;
+
+        const loadMoreObserver = new IntersectionObserver(async (entries) => {
+            if (entries[0].isIntersecting && !isLoading) {
+                isLoading = true;
+                loadingIndicator.classList.remove('opacity-0');
+                loadingIndicator.classList.add('opacity-100');
+
+                try {
+                    // Send viewed history to avoid duplicates
+                    const history = getHistoryForBackend();
+                    const response = await fetch(`/load_more?exclude=${encodeURIComponent(history)}`);
+                    const html = await response.text();
+
+                    if (html.trim()) {
+                        // Insert new items before the loading indicator
+                        loadingIndicator.insertAdjacentHTML('beforebegin', html);
+
+                        // Observe new cards for view tracking
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = html;
+                        const newCards = tempDiv.querySelectorAll('[data-page-title]');
+                        newCards.forEach(card => viewObserver.observe(card));
+                    } else {
+                        // No more content - hide loading indicator and stop observing
+                        loadingIndicator.style.display = 'none';
+                        loadMoreObserver.disconnect();
+                    }
+                } catch (e) {
+                    console.error('Failed to load more:', e);
+                } finally {
+                    isLoading = false;
+                    loadingIndicator.classList.add('opacity-0');
+                    loadingIndicator.classList.remove('opacity-100');
+                }
+            }
+        }, { rootMargin: '400px' });
+
+        loadMoreObserver.observe(loadingIndicator);
+
+        function openComments(pageTitle) {
+            const sheet = document.getElementById('comment-sheet');
+            const content = document.getElementById('sheet-content');
+            const overlay = sheet.querySelector('.overlay-backdrop');
+
+            // 1. Show the overlay and make it interactive
+            sheet.classList.remove('opacity-0', 'pointer-events-none');
+            overlay.classList.add('pointer-events-auto');
+
+            // 2. Slide up the sheet
+            setTimeout(() => {
+                content.classList.remove('translate-y-full');
+            }, 10);
+
+            // 3. Use HTMX API to fetch comments dynamically
+            htmx.ajax('GET', '/comments/' + pageTitle, '#comments-container');
+        }
+
+        function closeComments() {
+            const sheet = document.getElementById('comment-sheet');
+            const content = document.getElementById('sheet-content');
+            const overlay = sheet.querySelector('.overlay-backdrop');
+
+            // 1. Slide down
+            content.classList.add('translate-y-full');
+
+            // 2. Hide overlay and disable clicks after animation
+            setTimeout(() => {
+                sheet.classList.add('opacity-0', 'pointer-events-none');
+                overlay.classList.remove('pointer-events-auto');
+            }, 300);
+        }
+    </script>
+</body>
+</html>

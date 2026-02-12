@@ -1,0 +1,9 @@
+<div class="flex gap-3 items-start animate-fade-in-up">
+    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-400 to-purple-500 flex-shrink-0 flex items-center justify-center font-bold text-xs">
+        {{ comment.user.username[0].upper() }}
+    </div>
+    <div>
+        <p class="text-xs font-bold text-gray-400">{{ comment.user.username }}</p>
+        <p class="text-sm text-white">{{ comment.text }}</p>
+    </div>
+</div>

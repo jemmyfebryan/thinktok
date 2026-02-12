@@ -1,0 +1,8 @@
+<button hx-post="/toggle_like" hx-swap="outerHTML" name="content_id" value="{{ content_id }}"
+    class="flex flex-col items-center group transition-transform active:scale-90 cursor-pointer">
+    <div class="w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors
+        {{ 'bg-red-600 text-white' if is_liked else 'bg-gray-800/60 text-white hover:bg-gray-700' }}">
+        <span class="text-2xl">{{ '❤️' if is_liked else '🤍' }}</span>
+    </div>
+    <span class="text-xs font-bold drop-shadow-md">{{ 'Liked' if is_liked else 'Like' }}</span>
+</button>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WikiTok</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="text-white">
+
+    <div id="feed-container"></div>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 h-16 bg-black border-t border-gray-800 flex justify-around items-center z-30" style="width: 100%; max-width: 480px; left: 50%; transform: translateX(-50%);">
+        <a href="/" class="flex flex-col items-center text-white">
+            <span class="text-2xl">🏠</span>
+            <span class="text-[10px] font-bold mt-1">Home</span>
+        </a>
+        <div class="w-10 h-10 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-full flex items-center justify-center -mt-6 border-4 border-black shadow-lg">
+            <span class="text-xl">➕</span>
+        </div>
+        <button data-route="profile" class="flex flex-col items-center text-gray-500 hover:text-white transition-colors bg-transparent border-0 cursor-pointer">
+            <span class="text-2xl">👤</span>
+            <span class="text-[10px] font-bold mt-1">Profile</span>
+        </button>
+    </nav>
+
+    <!-- Comment Sheet -->
+    <div id="comment-sheet" class="fixed z-50 pointer-events-none transition-opacity duration-300 opacity-0" style="top: 0; bottom: 0; width: 100%; max-width: 480px; left: 50%; transform: translateX(-50%);">
+        <div class="absolute inset-0 bg-black/60 overlay-backdrop"></div>
+
+        <div id="sheet-content" class="absolute bottom-0 w-full h-[60vh] bg-gray-900 rounded-t-2xl transform translate-y-full transition-transform duration-300 ease-out pointer-events-auto flex flex-col">
+            <div class="w-full flex justify-center py-3 cursor-pointer">
+                <div class="w-12 h-1.5 bg-gray-600 rounded-full"></div>
+            </div>
+
+            <div class="px-4 border-b border-gray-800 pb-2 flex justify-between items-center">
+                <h3 class="font-bold">Comments</h3>
+                <button class="text-gray-400 close-btn">✕</button>
+            </div>
+
+            <div id="comments-list" class="flex-1 overflow-y-auto p-4 pb-20">
+                <div class="flex justify-center mt-10"><span class="animate-spin text-2xl">🌀</span></div>
+            </div>
+
+            <form id="comment-form" class="absolute bottom-0 left-0 w-full p-4 bg-gray-900 border-t border-gray-700 flex gap-2">
+                <input type="hidden" name="content_id">
+                <input type="text" name="text" placeholder="Add a comment..." required autocomplete="off"
+                    class="flex-1 bg-gray-800 text-white rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button type="submit" class="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center">➤</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
