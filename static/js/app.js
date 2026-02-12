@@ -447,10 +447,10 @@ class WikiTok {
         newCards.forEach(card => observer.observe(card));
     }
 
-    // Infinite Scroll - triggers when 5 cards away from end
+    // Infinite Scroll - triggers when 4 cards away from end
     setupInfiniteScroll() {
         const loadingIndicator = document.getElementById('loading-indicator');
-        this.LOAD_MORE_THRESHOLD = 5; // Trigger when 5 cards away from end
+        this.LOAD_MORE_THRESHOLD = 3; // Trigger when 4 cards away from end (threshold + 1 = cards remaining)
 
         // Create or get sentinel element for detecting when to load more
         const sentinelElement = this.getOrCreateLoadMoreSentinel();
